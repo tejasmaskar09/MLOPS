@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Student Score Predictor</title>
+    <meta name="description" content="Experiment 10: Live ML predictions with real-time sliders and instant results visualization.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <style>
+        /* ========== DESIGN TOKENS ========== */
+        :root {
+            --bg-base: #06080f;
+            --bg-surface: #0d1117;
+            --bg-card: #161b26;
+            --bg-card-alt: #1c2333;
+            --bg-input: #111827;
+            --border: #252d3d;
+            --border-accent: #3b4764;
+            --text-1: #f0f4fc;
+            --text-2: #9ba4b8;
+            --text-3: #5e687e;
+            --indigo: #6366f1;
+            --indigo-light: #818cf8;
+            --violet: #8b5cf6;
+            --cyan: #22d3ee;
+            --emerald: #34d399;
+            --rose: #fb7185;
+            --amber: #fbbf24;
+            --orange: #f97316;
+            --gradient-hero: linear-gradient(135deg, #6366f1, #8b5cf6, #a78bfa);
+            --gradient-cyan: linear-gradient(135deg, #06b6d4, #3b82f6);
+            --gradient-emerald: linear-gradient(135deg, #10b981, #34d399);
+            --gradient-warm: linear-gradient(135deg, #f59e0b, #ef4444);
+            --shadow: 0 24px 64px rgba(0,0,0,0.5);
+            --shadow-glow: 0 0 60px rgba(99,102,241,0.12);
+            --radius: 20px;
+            --radius-sm: 12px;
+            --radius-xs: 8px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ========== RESET & BASE ========== */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-base);
+            color: var(--text-1);
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Animated mesh background */
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 15% 20%, rgba(99,102,241,0.07), transparent),
+                radial-gradient(ellipse 60% 80% at 85% 75%, rgba(139,92,246,0.06), transparent),
+                radial-gradient(ellipse 50% 50% at 50% 50%, rgba(34,211,238,0.03), transparent);
+            animation: meshMove 25s ease-in-out infinite alternate;
+            pointer-events: none;
+            z-index: 0;
+        }
+        @keyframes meshMove {
+            0%   { transform: translate(0, 0) scale(1); }
+            50%  { transform: translate(2%, -2%) scale(1.02); }
+            100% { transform: translate(-1%, 1%) scale(1); }
+        }
+
+        /* Grid noise overlay */
+        body::after {
+            content: '';
+            position: fixed; inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M60 0H0v60' fill='none' stroke='%23ffffff' stroke-opacity='0.015'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app {
+            position: relative;
+            z-index: 1;
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        /* ========== HEADER ========== */
+        .header {
+            text-align: center;
+            padding: 3rem 0 2.5rem;
+        }
+        .header-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 18px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            background: rgba(99,102,241,0.1);
+            border: 1px solid rgba(99,102,241,0.25);
+            color: var(--indigo-light);
+            margin-bottom: 1.25rem;
+        }
+        .header-badge .dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: var(--emerald);
+            animation: blink 2s ease-in-out infinite;
+        }
+        .header-badge.offline { border-color: rgba(251,113,133,0.3); background: rgba(251,113,133,0.08); color: var(--rose); }
+        .header-badge.offline .dot { background: var(--rose); animation: none; }
+        @keyframes blink {
+            0%,100% { opacity:1; transform: scale(1); }
+            50% { opacity:0.4; transform: scale(0.75); }
+        }
+        .header h1 {
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 900;
+            letter-spacing: -1.5px;
+            line-height: 1.15;
+            background: var(--gradient-hero);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header p {
+            margin-top: 0.6rem;
+            color: var(--text-2);
+            font-size: 1.05rem;
+            font-weight: 300;
+            max-width: 500px;
+            margin-inline: auto;
+        }
+
+        /* ========== LAYOUT GRID ========== */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 1.75rem;
+            align-items: start;
+        }
+        @media (max-width: 960px) { .main-grid { grid-template-columns: 1fr; } }
+
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.75rem;
+            margin-top: 1.75rem;
+        }
+        @media (max-width: 768px) { .bottom-grid { grid-template-columns: 1fr; } }
+
+        /* ========== CARD ========== */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.75rem;
+            transition: border-color var(--transition), box-shadow var(--transition);
+        }
+        .card:hover {
+            border-color: var(--border-accent);
+            box-shadow: var(--shadow-glow);
+        }
+        .card-header {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 1.5rem;
+        }
+        .card-icon {
+            width: 40px; height: 40px;
+            border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.15rem;
+            flex-shrink: 0;
+        }
+        .card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+        .card-subtitle {
+            font-size: 0.78rem;
+            color: var(--text-3);
+            margin-top: 1px;
+        }
+
+        /* ========== API KEY ========== */
+        .api-key-bar {
+            display: flex; gap: 8px;
+            margin-bottom: 1.75rem;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            align-items: center;
+        }
+        .api-key-bar label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--indigo-light);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            white-space: nowrap;
+        }
+        .api-key-bar input {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-1);
+            font-family: 'Inter', monospace;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        /* ========== SLIDER GROUP ========== */
+        .slider-group {
+            margin-bottom: 1.5rem;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 10px;
+        }
+        .slider-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-2);
+        }
+        .slider-value-box {
+            display: flex; align-items: center; gap: 4px;
+        }
+        .slider-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            min-width: 50px;
+            text-align: right;
+        }
+        .slider-unit {
+            font-size: 0.7rem;
+            color: var(--text-3);
+            font-weight: 500;
+        }
+        .slider-track {
+            position: relative;
+            height: 8px;
+            background: var(--bg-input);
+            border-radius: 999px;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        .slider-fill {
+            position: absolute;
+            top: 0; left: 0;
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.1s ease;
+        }
+        .slider-input {
+            position: absolute;
+            top: -6px; left: 0;
+            width: 100%;
+            height: 20px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: none;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .slider-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: var(--text-1);
+            border: 3px solid var(--bg-card);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            transition: transform 0.15s ease;
+        }
+        .slider-input::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        .slider-input::-moz-range-thumb {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: var(--text-1);
+            border: 3px solid var(--bg-card);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+        .slider-range {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+            font-size: 0.68rem;
+            color: var(--text-3);
+        }
+
+        /* ========== RESULT PANEL ========== */
+        .result-panel {
+            margin-top: 0.5rem;
+            padding: 2rem;
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            text-align: center;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .result-panel::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--gradient-hero);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .result-panel.active::before { opacity: 1; }
+        .result-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 8px;
+        }
+        .result-score {
+            font-size: 4.5rem;
+            font-weight: 900;
+            letter-spacing: -3px;
+            line-height: 1;
+            transition: color 0.3s;
+        }
+        .result-score.loading {
+            animation: pulse-score 1s ease-in-out infinite;
+        }
+        @keyframes pulse-score {
+            0%,100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .result-grade {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            padding: 6px 16px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .result-grade.excellent { background: rgba(52,211,153,0.12); color: var(--emerald); border: 1px solid rgba(52,211,153,0.2); }
+        .result-grade.good { background: rgba(34,211,238,0.12); color: var(--cyan); border: 1px solid rgba(34,211,238,0.2); }
+        .result-grade.average { background: rgba(251,191,36,0.12); color: var(--amber); border: 1px solid rgba(251,191,36,0.2); }
+        .result-grade.poor { background: rgba(251,113,133,0.12); color: var(--rose); border: 1px solid rgba(251,113,133,0.2); }
+
+        .result-meta {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 1rem;
+            font-size: 0.75rem;
+            color: var(--text-3);
+        }
+        .result-meta span { display: flex; align-items: center; gap: 4px; }
+
+        /* ========== LIVE INDICATOR ========== */
+        .live-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            background: rgba(239,68,68,0.12);
+            border: 1px solid rgba(239,68,68,0.25);
+            color: #ef4444;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .live-tag .rec-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        /* ========== RIGHT COLUMN - LIVE CHART ========== */
+        .chart-area {
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        /* ========== HISTORY TABLE ========== */
+        .table-wrapper {
+            max-height: 310px;
+            overflow-y: auto;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+        .table-wrapper::-webkit-scrollbar { width: 6px; }
+        .table-wrapper::-webkit-scrollbar-track { background: var(--bg-input); }
+        .table-wrapper::-webkit-scrollbar-thumb { background: var(--border-accent); border-radius: 999px; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        thead { position: sticky; top: 0; z-index: 2; }
+        th {
+            background: var(--bg-surface);
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 700;
+            color: var(--text-3);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+        td {
+            padding: 10px 14px;
+            border-top: 1px solid var(--border);
+            color: var(--text-2);
+        }
+        tr:hover td { background: rgba(99,102,241,0.03); }
+        .td-score {
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 0.68rem;
+            font-weight: 700;
+        }
+        .tag-excellent { background: rgba(52,211,153,0.12); color: var(--emerald); }
+        .tag-good { background: rgba(34,211,238,0.12); color: var(--cyan); }
+        .tag-average { background: rgba(251,191,36,0.12); color: var(--amber); }
+        .tag-poor { background: rgba(251,113,133,0.12); color: var(--rose); }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-3);
+            font-size: 0.85rem;
+        }
+        .empty-state .empty-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.3;
+        }
+
+        /* ========== STAT MINI CARDS ========== */
+        .stat-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-top: 1.75rem;
+        }
+        @media (max-width: 768px) { .stat-strip { grid-template-columns: repeat(2, 1fr); } }
+        .stat-mini {
+            padding: 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            text-align: center;
+            transition: border-color var(--transition), transform var(--transition);
+        }
+        .stat-mini:hover { border-color: var(--border-accent); transform: translateY(-2px); }
+        .stat-mini-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        .stat-mini-label {
+            font-size: 0.68rem;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        /* ========== ERROR TOAST ========== */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 14px 22px;
+            background: var(--bg-card);
+            border: 1px solid rgba(251,113,133,0.3);
+            border-radius: var(--radius-sm);
+            color: var(--rose);
+            font-size: 0.85rem;
+            font-weight: 500;
+            box-shadow: var(--shadow);
+            z-index: 100;
+            transform: translateY(120%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .toast.show { transform: translateY(0); }
+
+        /* ========== UTILITY ========== */
+        .color-indigo { color: var(--indigo-light); }
+        .color-cyan { color: var(--cyan); }
+        .color-emerald { color: var(--emerald); }
+        .color-amber { color: var(--amber); }
+        .color-rose { color: var(--rose); }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- ========== HEADER ========== -->
+        <header class="header">
+            <div class="header-badge" id="statusBadge">
+                <span class="dot"></span>
+                <span id="statusText">Connecting...</span>
+            </div>
+            <h1>Real-Time Prediction</h1>
+            <p>Adjust the sliders and watch the ML model predict instantly</p>
+        </header>
+
+        <!-- ========== STAT STRIP ========== -->
+        <div class="stat-strip">
+            <div class="stat-mini">
+                <div class="stat-mini-value color-indigo" id="statTotal">0</div>
+                <div class="stat-mini-label">Predictions</div>
+            </div>
+            <div class="stat-mini">
+                <div class="stat-mini-value color-emerald" id="statAvg">--</div>
+                <div class="stat-mini-label">Avg Score</div>
+            </div>
+            <div class="stat-mini">
+                <div class="stat-mini-value color-cyan" id="statMax">--</div>
+                <div class="stat-mini-label">Highest</div>
+            </div>
+            <div class="stat-mini">
+                <div class="stat-mini-value color-amber" id="statMin">--</div>
+                <div class="stat-mini-label">Lowest</div>
+            </div>
+        </div>
+
+        <!-- ========== MAIN GRID ========== -->
+        <div class="main-grid" style="margin-top: 1.75rem;">
+            <!-- LEFT: Controls -->
+            <div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: rgba(99,102,241,0.12); color: var(--indigo-light);">&#9881;</div>
+                        <div>
+                            <div class="card-title">Input Features</div>
+                            <div class="card-subtitle">Drag sliders for live predictions</div>
+                        </div>
+                        <div style="margin-left:auto;">
+                            <span class="live-tag"><span class="rec-dot"></span>LIVE</span>
+                        </div>
+                    </div>
+
+                    <!-- API Key -->
+                    <div class="api-key-bar">
+                        <label>&#128274; API Key</label>
+                        <input type="text" id="apiKey" value="mlops-demo-key-2024" spellcheck="false">
+                    </div>
+
+                    <!-- Slider: Hours -->
+                    <div class="slider-group" id="hoursGroup">
+                        <div class="slider-label">
+                            <span class="slider-name">&#128214; Study Hours</span>
+                            <div class="slider-value-box">
+                                <span class="slider-value color-indigo" id="hoursDisplay">5</span>
+                                <span class="slider-unit">hrs/day</span>
+                            </div>
+                        </div>
+                        <div class="slider-track">
+                            <div class="slider-fill" id="hoursFill" style="background: var(--gradient-hero); width: 50%;"></div>
+                            <input type="range" class="slider-input" id="hoursSlider" min="0" max="10" step="0.5" value="5">
+                        </div>
+                        <div class="slider-range"><span>0</span><span>5</span><span>10</span></div>
+                    </div>
+
+                    <!-- Slider: Attendance -->
+                    <div class="slider-group" id="attendanceGroup">
+                        <div class="slider-label">
+                            <span class="slider-name">&#128197; Attendance</span>
+                            <div class="slider-value-box">
+                                <span class="slider-value color-cyan" id="attendanceDisplay">70</span>
+                                <span class="slider-unit">%</span>
+                            </div>
+                        </div>
+                        <div class="slider-track">
+                            <div class="slider-fill" id="attendanceFill" style="background: var(--gradient-cyan); width: 70%;"></div>
+                            <input type="range" class="slider-input" id="attendanceSlider" min="0" max="100" step="1" value="70">
+                        </div>
+                        <div class="slider-range"><span>0%</span><span>50%</span><span>100%</span></div>
+                    </div>
+
+                    <!-- Slider: Previous Score -->
+                    <div class="slider-group" id="prevScoreGroup">
+                        <div class="slider-label">
+                            <span class="slider-name">&#128200; Previous Score</span>
+                            <div class="slider-value-box">
+                                <span class="slider-value color-emerald" id="prevScoreDisplay">60</span>
+                                <span class="slider-unit">/ 100</span>
+                            </div>
+                        </div>
+                        <div class="slider-track">
+                            <div class="slider-fill" id="prevScoreFill" style="background: var(--gradient-emerald); width: 60%;"></div>
+                            <input type="range" class="slider-input" id="prevScoreSlider" min="0" max="100" step="1" value="60">
+                        </div>
+                        <div class="slider-range"><span>0</span><span>50</span><span>100</span></div>
+                    </div>
+                </div>
+
+                <!-- Result Panel -->
+                <div class="result-panel" id="resultPanel">
+                    <div class="result-label">Predicted Final Score</div>
+                    <div class="result-score color-indigo" id="predictionScore">--</div>
+                    <div class="result-grade" id="gradeTag" style="display:none;">
+                        <span id="gradeText">--</span>
+                    </div>
+                    <div class="result-meta">
+                        <span>&#9201; <span id="latencyDisplay">--</span></span>
+                        <span>&#128293; Request #<span id="reqNumDisplay">0</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Live Chart -->
+            <div class="chart-area">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: rgba(34,211,238,0.12); color: var(--cyan);">&#128200;</div>
+                        <div>
+                            <div class="card-title">Prediction Timeline</div>
+                            <div class="card-subtitle">Live score history as you adjust inputs</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: rgba(139,92,246,0.12); color: var(--violet);">&#128202;</div>
+                        <div>
+                            <div class="card-title">Feature Impact</div>
+                            <div class="card-subtitle">How each input contributes to the prediction</div>
+                        </div>
+                    </div>
+                    <div class="chart-container" style="height: 220px;">
+                        <canvas id="featureChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== BOTTOM GRID ========== -->
+        <div class="bottom-grid">
+            <!-- History Table -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: rgba(251,191,36,0.12); color: var(--amber);">&#128203;</div>
+                    <div>
+                        <div class="card-title">Prediction History</div>
+                        <div class="card-subtitle">All predictions from this session</div>
+                    </div>
+                    <button onclick="clearHistory()" style="margin-left:auto; background:none; border:1px solid var(--border); color: var(--text-3); padding: 6px 14px; border-radius: var(--radius-xs); font-family: inherit; font-size: 0.75rem; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--rose)';this.style.color='var(--rose)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-3)'">Clear</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Hours</th>
+                                <th>Attend.</th>
+                                <th>Prev</th>
+                                <th>Predicted</th>
+                                <th>Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyBody">
+                            <tr><td colspan="6"><div class="empty-state"><div class="empty-icon">&#128203;</div>Move the sliders to start predicting</div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Score Distribution -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: rgba(251,113,133,0.12); color: var(--rose);">&#127919;</div>
+                    <div>
+                        <div class="card-title">Score Distribution</div>
+                        <div class="card-subtitle">Histogram of all predicted scores</div>
+                    </div>
+                </div>
+                <div class="chart-container" style="height: 260px;">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Toast -->
+    <div class="toast" id="errorToast"></div>
+
+    <script>
+    // ============================================================
+    //  CONFIG & STATE
+    // ============================================================
+    const API = 'http://127.0.0.1:8000';
+    let history = [];
+    let requestNum = 0;
+    let debounceTimer = null;
+
+    // ============================================================
+    //  HEALTH CHECK
+    // ============================================================
+    async function checkAPI() {
+        const badge = document.getElementById('statusBadge');
+        const text = document.getElementById('statusText');
+        try {
+            const r = await fetch(`${API}/health`);
+            const d = await r.json();
+            badge.className = d.model_loaded ? 'header-badge' : 'header-badge offline';
+            text.textContent = d.model_loaded ? 'API Online  ·  Model Loaded' : 'API Online  ·  No Model';
+        } catch {
+            badge.className = 'header-badge offline';
+            text.textContent = 'API Offline';
+        }
+    }
+    checkAPI();
+    setInterval(checkAPI, 15000);
+
+    // ============================================================
+    //  SLIDERS
+    // ============================================================
+    function setupSlider(sliderId, displayId, fillId, max) {
+        const slider = document.getElementById(sliderId);
+        const display = document.getElementById(displayId);
+        const fill = document.getElementById(fillId);
+
+        slider.addEventListener('input', () => {
+            const pct = (slider.value / max) * 100;
+            display.textContent = slider.value;
+            fill.style.width = pct + '%';
+            debouncedPredict();
+        });
+    }
+
+    setupSlider('hoursSlider', 'hoursDisplay', 'hoursFill', 10);
+    setupSlider('attendanceSlider', 'attendanceDisplay', 'attendanceFill', 100);
+    setupSlider('prevScoreSlider', 'prevScoreDisplay', 'prevScoreFill', 100);
+
+    // ============================================================
+    //  DEBOUNCED PREDICTION
+    // ============================================================
+    function debouncedPredict() {
+        clearTimeout(debounceTimer);
+        document.getElementById('predictionScore').classList.add('loading');
+        debounceTimer = setTimeout(predict, 250);
+    }
+
+    async function predict() {
+        const hours = parseFloat(document.getElementById('hoursSlider').value);
+        const attendance = parseFloat(document.getElementById('attendanceSlider').value);
+        const previous_score = parseFloat(document.getElementById('prevScoreSlider').value);
+        const apiKey = document.getElementById('apiKey').value;
+        const scoreEl = document.getElementById('predictionScore');
+        const panel = document.getElementById('resultPanel');
+
+        const start = performance.now();
+        try {
+            const r = await fetch(`${API}/predict`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
+                body: JSON.stringify({ hours, attendance, previous_score }),
+            });
+            const latency = Math.round(performance.now() - start);
+            requestNum++;
+
+            if (!r.ok) {
+                const err = await r.json();
+                throw new Error(err.detail || err.error || `HTTP ${r.status}`);
+            }
+
+            const data = await r.json();
+            const score = data.predicted_final_score;
+
+            // Update result
+            scoreEl.textContent = score.toFixed(1);
+            scoreEl.classList.remove('loading');
+            scoreEl.style.color = scoreColor(score);
+            panel.classList.add('active');
+
+            // Grade
+            const grade = getGrade(score);
+            const gradeTag = document.getElementById('gradeTag');
+            gradeTag.style.display = 'inline-flex';
+            gradeTag.className = `result-grade ${grade.cls}`;
+            document.getElementById('gradeText').textContent = grade.label;
+
+            // Meta
+            document.getElementById('latencyDisplay').textContent = `${latency}ms`;
+            document.getElementById('reqNumDisplay').textContent = requestNum;
+
+            // History
+            history.unshift({ num: requestNum, hours, attendance, previous_score, score, grade, time: new Date() });
+            if (history.length > 100) history.pop();
+
+            updateTable();
+            updateCharts();
+            updateStats();
+
+        } catch (err) {
+            scoreEl.textContent = '!';
+            scoreEl.classList.remove('loading');
+            scoreEl.style.color = 'var(--rose)';
+            showToast(err.message);
+        }
+    }
+
+    // ============================================================
+    //  HELPERS
+    // ============================================================
+    function getGrade(s) {
+        if (s >= 85) return { label: '★ Excellent', cls: 'excellent', tag: 'tag-excellent' };
+        if (s >= 70) return { label: '◆ Good', cls: 'good', tag: 'tag-good' };
+        if (s >= 55) return { label: '● Average', cls: 'average', tag: 'tag-average' };
+        return { label: '▼ Needs Work', cls: 'poor', tag: 'tag-poor' };
+    }
+
+    function scoreColor(s) {
+        if (s >= 85) return 'var(--emerald)';
+        if (s >= 70) return 'var(--cyan)';
+        if (s >= 55) return 'var(--amber)';
+        return 'var(--rose)';
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('errorToast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 4000);
+    }
+
+    // ============================================================
+    //  TABLE
+    // ============================================================
+    function updateTable() {
+        const tbody = document.getElementById('historyBody');
+        tbody.innerHTML = history.map(h => `
+            <tr class="fade-in">
+                <td style="color:var(--text-3)">${h.num}</td>
+                <td>${h.hours}</td>
+                <td>${h.attendance}%</td>
+                <td>${h.previous_score}</td>
+                <td class="td-score" style="color:${scoreColor(h.score)}">${h.score.toFixed(1)}</td>
+                <td><span class="tag ${h.grade.tag}">${h.grade.label}</span></td>
+            </tr>
+        `).join('');
+    }
+
+    function clearHistory() {
+        history = [];
+        requestNum = 0;
+        document.getElementById('historyBody').innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">&#128203;</div>History cleared</div></td></tr>';
+        updateStats();
+        updateCharts();
+    }
+
+    // ============================================================
+    //  STATS
+    // ============================================================
+    function updateStats() {
+        const scores = history.map(h => h.score);
+        document.getElementById('statTotal').textContent = history.length;
+        document.getElementById('statAvg').textContent = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : '--';
+        document.getElementById('statMax').textContent = scores.length ? Math.max(...scores).toFixed(1) : '--';
+        document.getElementById('statMin').textContent = scores.length ? Math.min(...scores).toFixed(1) : '--';
+    }
+
+    // ============================================================
+    //  CHARTS
+    // ============================================================
+    Chart.defaults.color = '#5e687e';
+    Chart.defaults.font.family = 'Inter';
+    Chart.defaults.borderColor = '#252d3d';
+
+    // -- Timeline Chart --
+    const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+    const timelineChart = new Chart(timelineCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Predicted Score',
+                data: [],
+                borderColor: '#818cf8',
+                backgroundColor: 'rgba(99,102,241,0.08)',
+                borderWidth: 2.5,
+                pointRadius: 4,
+                pointBackgroundColor: '#818cf8',
+                pointBorderColor: '#161b26',
+                pointBorderWidth: 2,
+                tension: 0.35,
+                fill: true,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 300 },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1c2333',
+                    titleColor: '#f0f4fc',
+                    bodyColor: '#9ba4b8',
+                    borderColor: '#252d3d',
+                    borderWidth: 1,
+                    cornerRadius: 10,
+                    padding: 12,
+                }
+            },
+            scales: {
+                x: { display: true, grid: { display: false }, ticks: { maxTicksLimit: 10 } },
+                y: { grid: { color: 'rgba(37,45,61,0.5)' }, suggestedMin: 30, suggestedMax: 100 },
+            }
+        }
+    });
+
+    // -- Feature Impact Chart --
+    const featureCtx = document.getElementById('featureChart').getContext('2d');
+    const featureChart = new Chart(featureCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Study Hours', 'Attendance', 'Previous Score'],
+            datasets: [{
+                label: 'Input Value (normalized)',
+                data: [50, 70, 60],
+                backgroundColor: ['rgba(99,102,241,0.7)', 'rgba(34,211,238,0.7)', 'rgba(52,211,153,0.7)'],
+                borderColor: ['#6366f1', '#22d3ee', '#34d399'],
+                borderWidth: 2,
+                borderRadius: 8,
+                barPercentage: 0.5,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 300 },
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { max: 100, grid: { color: 'rgba(37,45,61,0.4)' } },
+                y: { grid: { display: false } },
+            }
+        }
+    });
+
+    // -- Distribution Chart --
+    const distCtx = document.getElementById('distributionChart').getContext('2d');
+    const distChart = new Chart(distCtx, {
+        type: 'bar',
+        data: {
+            labels: ['< 50', '50-60', '60-70', '70-80', '80-90', '90+'],
+            datasets: [{
+                label: 'Count',
+                data: [0, 0, 0, 0, 0, 0],
+                backgroundColor: [
+                    'rgba(251,113,133,0.65)',
+                    'rgba(249,115,22,0.65)',
+                    'rgba(251,191,36,0.65)',
+                    'rgba(34,211,238,0.65)',
+                    'rgba(52,211,153,0.65)',
+                    'rgba(99,102,241,0.65)',
+                ],
+                borderColor: ['#fb7185','#f97316','#fbbf24','#22d3ee','#34d399','#6366f1'],
+                borderWidth: 2,
+                borderRadius: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 300 },
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(37,45,61,0.4)' } },
+            }
+        }
+    });
+
+    function updateCharts() {
+        // Timeline
+        const recent = history.slice().reverse().slice(-30);
+        timelineChart.data.labels = recent.map((_, i) => `#${recent[i].num}`);
+        timelineChart.data.datasets[0].data = recent.map(h => h.score);
+        timelineChart.update('none');
+
+        // Feature bars
+        const lastH = history[0];
+        if (lastH) {
+            featureChart.data.datasets[0].data = [
+                (lastH.hours / 10) * 100,
+                lastH.attendance,
+                lastH.previous_score,
+            ];
+            featureChart.update('none');
+        }
+
+        // Distribution
+        const bins = [0, 0, 0, 0, 0, 0];
+        history.forEach(h => {
+            const s = h.score;
+            if (s < 50) bins[0]++;
+            else if (s < 60) bins[1]++;
+            else if (s < 70) bins[2]++;
+            else if (s < 80) bins[3]++;
+            else if (s < 90) bins[4]++;
+            else bins[5]++;
+        });
+        distChart.data.datasets[0].data = bins;
+        distChart.update('none');
+    }
+
+    // Initial prediction on load
+    setTimeout(predict, 500);
+    </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.git/
+.github/
+*.md
+test_api.py
+experiment1_train_model.py
+.env
+.venv/
+postman_collection.json
+frontend/
