@@ -225,9 +225,7 @@ async def get_token(username: str = "demo_user"):
     tags=["Prediction"],
 )
 async def predict(
-    request: PredictionRequest,
-    api_key: str = Depends(api_key_header),
-    auth_info: str = Depends(verify_auth),
+    request: PredictionRequest
 ):
     """
     Predict a student's final score.
