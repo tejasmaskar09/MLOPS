@@ -700,6 +700,7 @@
     </div>
 
     <script>
+        const apiKey = "mlops-demo-key-2024";
         // ============================
         // Configuration
         // ============================
@@ -751,7 +752,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-API-Key': document.getElementById('apiKey').value,
+                        'X-API-Key': 'mlops-demo-key-2024',
                     },
                     body: JSON.stringify({
                         hours: parseFloat(document.getElementById('hours').value),
