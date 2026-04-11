@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MLOps — Student Score Predictor</title>
-    <meta name="description" content="Predict student final scores using machine learning. Visualize predictions with charts and tables.">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="description"
+        content="Predict student final scores using machine learning. Visualize predictions with charts and tables.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <style>
         :root {
@@ -26,13 +29,17 @@
             --gradient-1: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
             --gradient-2: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
             --gradient-3: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
-            --shadow-lg: 0 20px 60px rgba(0,0,0,0.4);
-            --shadow-glow: 0 0 40px rgba(99,102,241,0.15);
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.4);
+            --shadow-glow: 0 0 40px rgba(99, 102, 241, 0.15);
             --radius: 16px;
             --radius-sm: 10px;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Inter', -apple-system, sans-serif;
@@ -46,15 +53,22 @@
         body::before {
             content: '';
             position: fixed;
-            top: -50%; left: -50%;
-            width: 200%; height: 200%;
-            background: radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.08) 0%, transparent 50%),
-                        radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.06) 0%, transparent 50%),
-                        radial-gradient(ellipse at 50% 80%, rgba(6,182,212,0.05) 0%, transparent 50%);
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(6, 182, 212, 0.05) 0%, transparent 50%);
             animation: bgShift 20s ease-in-out infinite alternate;
             z-index: 0;
         }
-        @keyframes bgShift { to { transform: translate(5%, -3%) rotate(2deg); } }
+
+        @keyframes bgShift {
+            to {
+                transform: translate(5%, -3%) rotate(2deg);
+            }
+        }
 
         /* Layout */
         .container {
@@ -71,6 +85,7 @@
             margin-bottom: 3rem;
             padding: 2.5rem 0;
         }
+
         .header h1 {
             font-size: 2.8rem;
             font-weight: 800;
@@ -81,11 +96,13 @@
             letter-spacing: -1px;
             margin-bottom: 0.5rem;
         }
+
         .header p {
             color: var(--text-secondary);
             font-size: 1.1rem;
             font-weight: 300;
         }
+
         .status-badge {
             display: inline-flex;
             align-items: center;
@@ -99,18 +116,39 @@
             border: 1px solid rgba(52, 211, 153, 0.3);
             color: var(--success);
         }
+
         .status-dot {
-            width: 8px; height: 8px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: var(--success);
             animation: pulse 2s ease-in-out infinite;
         }
+
         @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.8); }
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.8);
+            }
         }
-        .status-badge.offline { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3); color: var(--error); }
-        .status-badge.offline .status-dot { background: var(--error); animation: none; }
+
+        .status-badge.offline {
+            background: rgba(248, 113, 113, 0.1);
+            border-color: rgba(248, 113, 113, 0.3);
+            color: var(--error);
+        }
+
+        .status-badge.offline .status-dot {
+            background: var(--error);
+            animation: none;
+        }
 
         /* Cards */
         .card {
@@ -121,7 +159,12 @@
             transition: all 0.3s ease;
             box-shadow: var(--shadow-lg);
         }
-        .card:hover { border-color: var(--accent-1); box-shadow: var(--shadow-glow); }
+
+        .card:hover {
+            border-color: var(--accent-1);
+            box-shadow: var(--shadow-glow);
+        }
+
         .card-title {
             font-size: 1.15rem;
             font-weight: 600;
@@ -130,21 +173,44 @@
             align-items: center;
             gap: 10px;
         }
+
         .card-title .icon {
-            width: 36px; height: 36px;
+            width: 36px;
+            height: 36px;
             border-radius: var(--radius-sm);
-            display: flex; align-items: center; justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 1.1rem;
         }
 
         /* Grid */
-        .grid { display: grid; gap: 1.5rem; }
-        .grid-2 { grid-template-columns: 1fr 1fr; }
-        .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
-        @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .grid-2 {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .grid-3 {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        @media (max-width: 900px) {
+
+            .grid-2,
+            .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
 
         /* Form */
-        .form-group { margin-bottom: 1.25rem; }
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
         .form-label {
             display: block;
             font-size: 0.85rem;
@@ -152,6 +218,7 @@
             color: var(--text-secondary);
             margin-bottom: 0.4rem;
         }
+
         .form-input {
             width: 100%;
             padding: 12px 16px;
@@ -164,24 +231,42 @@
             transition: border-color 0.2s, box-shadow 0.2s;
             outline: none;
         }
+
         .form-input:focus {
             border-color: var(--accent-1);
-            box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
         }
-        .form-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
 
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-        @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+        .form-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
 
         /* API Key input */
         .api-key-group {
             margin-bottom: 1.5rem;
             padding: 1rem;
-            background: rgba(99,102,241,0.05);
-            border: 1px solid rgba(99,102,241,0.2);
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.2);
             border-radius: var(--radius-sm);
         }
-        .api-key-group .form-label { color: var(--accent-2); }
+
+        .api-key-group .form-label {
+            color: var(--accent-2);
+        }
 
         /* Button */
         .btn {
@@ -199,20 +284,36 @@
             transition: all 0.25s ease;
             width: 100%;
         }
+
         .btn-primary {
             background: var(--gradient-1);
             color: white;
         }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(99,102,241,0.4); }
-        .btn-primary:active { transform: translateY(0); }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
 
         .btn-secondary {
             background: var(--bg-secondary);
             color: var(--text-primary);
             border: 1px solid var(--border);
         }
-        .btn-secondary:hover { border-color: var(--accent-1); }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-1);
+        }
 
         /* Result card */
         .result-card {
@@ -223,19 +324,33 @@
             text-align: center;
             animation: slideUp 0.4s ease;
         }
-        .result-card.show { display: block; }
+
+        .result-card.show {
+            display: block;
+        }
+
         .result-card.success {
-            background: rgba(52,211,153,0.08);
-            border: 1px solid rgba(52,211,153,0.25);
+            background: rgba(52, 211, 153, 0.08);
+            border: 1px solid rgba(52, 211, 153, 0.25);
         }
+
         .result-card.error {
-            background: rgba(248,113,113,0.08);
-            border: 1px solid rgba(248,113,113,0.25);
+            background: rgba(248, 113, 113, 0.08);
+            border: 1px solid rgba(248, 113, 113, 0.25);
         }
+
         @keyframes slideUp {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
+
         .result-score {
             font-size: 3.5rem;
             font-weight: 800;
@@ -244,6 +359,7 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+
         .result-label {
             font-size: 0.9rem;
             color: var(--text-secondary);
@@ -257,7 +373,13 @@
             gap: 1rem;
             margin-bottom: 2rem;
         }
-        @media (max-width: 600px) { .stats-row { grid-template-columns: 1fr; } }
+
+        @media (max-width: 600px) {
+            .stats-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .stat-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -266,16 +388,36 @@
             text-align: center;
             transition: all 0.3s ease;
         }
-        .stat-card:hover { transform: translateY(-3px); border-color: var(--accent-1); }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--accent-1);
+        }
+
         .stat-value {
             font-size: 2rem;
             font-weight: 700;
             margin-bottom: 2px;
         }
-        .stat-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-        .stat-card:nth-child(1) .stat-value { color: var(--accent-2); }
-        .stat-card:nth-child(2) .stat-value { color: var(--success); }
-        .stat-card:nth-child(3) .stat-value { color: var(--warning); }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-card:nth-child(1) .stat-value {
+            color: var(--accent-2);
+        }
+
+        .stat-card:nth-child(2) .stat-value {
+            color: var(--success);
+        }
+
+        .stat-card:nth-child(3) .stat-value {
+            color: var(--warning);
+        }
 
         /* Table */
         .table-wrapper {
@@ -283,11 +425,13 @@
             border-radius: var(--radius-sm);
             border: 1px solid var(--border);
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             font-size: 0.9rem;
         }
+
         th {
             background: var(--bg-secondary);
             padding: 12px 16px;
@@ -299,13 +443,18 @@
             letter-spacing: 0.5px;
             white-space: nowrap;
         }
+
         td {
             padding: 11px 16px;
             border-top: 1px solid var(--border);
             color: var(--text-primary);
             white-space: nowrap;
         }
-        tr:hover td { background: rgba(99,102,241,0.04); }
+
+        tr:hover td {
+            background: rgba(99, 102, 241, 0.04);
+        }
+
         .tag {
             display: inline-block;
             padding: 3px 10px;
@@ -313,9 +462,21 @@
             font-size: 0.75rem;
             font-weight: 600;
         }
-        .tag-high { background: rgba(52,211,153,0.15); color: var(--success); }
-        .tag-mid { background: rgba(251,191,36,0.15); color: var(--warning); }
-        .tag-low { background: rgba(248,113,113,0.15); color: var(--error); }
+
+        .tag-high {
+            background: rgba(52, 211, 153, 0.15);
+            color: var(--success);
+        }
+
+        .tag-mid {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--warning);
+        }
+
+        .tag-low {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--error);
+        }
 
         /* Chart containers */
         .chart-container {
@@ -325,24 +486,45 @@
 
         /* Loading spinner */
         .spinner {
-            width: 20px; height: 20px;
-            border: 2.5px solid rgba(255,255,255,0.2);
+            width: 20px;
+            height: 20px;
+            border: 2.5px solid rgba(255, 255, 255, 0.2);
             border-top-color: white;
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
             display: none;
         }
-        .loading .spinner { display: inline-block; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading .spinner {
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
 
         /* Batch section */
         .batch-controls {
-            display: flex; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center;
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+            align-items: center;
         }
-        .batch-controls .btn { width: auto; padding: 10px 20px; font-size: 0.9rem; }
+
+        .batch-controls .btn {
+            width: auto;
+            padding: 10px 20px;
+            font-size: 0.9rem;
+        }
 
         /* Section spacing */
-        .section { margin-bottom: 2rem; }
+        .section {
+            margin-bottom: 2rem;
+        }
+
         .section-title {
             font-size: 1.5rem;
             font-weight: 700;
@@ -353,6 +535,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Header -->
@@ -391,23 +574,27 @@
 
                 <div class="api-key-group">
                     <label class="form-label">&#128274; API Key</label>
-                    <input type="text" class="form-input" id="apiKey" value="mlops-demo-key-2024" placeholder="Enter your API key">
+                    <input type="text" class="form-input" id="apiKey" value="mlops-demo-key-2024"
+                        placeholder="Enter your API key">
                 </div>
 
                 <form id="predictForm">
                     <div class="form-group">
                         <label class="form-label">Study Hours (per day)</label>
-                        <input type="number" class="form-input" id="hours" value="5" min="0" max="24" step="0.5" required>
+                        <input type="number" class="form-input" id="hours" value="5" min="0" max="24" step="0.5"
+                            required>
                         <div class="form-hint">0 – 24 hours</div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Attendance %</label>
-                            <input type="number" class="form-input" id="attendance" value="70" min="0" max="100" step="1" required>
+                            <input type="number" class="form-input" id="attendance" value="70" min="0" max="100"
+                                step="1" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Previous Score</label>
-                            <input type="number" class="form-input" id="previousScore" value="60" min="0" max="100" step="1" required>
+                            <input type="number" class="form-input" id="previousScore" value="60" min="0" max="100"
+                                step="1" required>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary" id="predictBtn">
@@ -449,7 +636,8 @@
                 <!-- Table -->
                 <div class="card">
                     <div class="card-title">
-                        <div class="icon" style="background: rgba(167,139,250,0.15); color: var(--accent-3);">&#9638;</div>
+                        <div class="icon" style="background: rgba(167,139,250,0.15); color: var(--accent-3);">&#9638;
+                        </div>
                         Prediction Results
                     </div>
                     <div class="table-wrapper">
@@ -465,7 +653,10 @@
                                 </tr>
                             </thead>
                             <tbody id="resultsTableBody">
-                                <tr><td colspan="6" style="text-align:center; color: var(--text-muted); padding: 2rem;">Click "Run Batch Predictions" to populate</td></tr>
+                                <tr>
+                                    <td colspan="6" style="text-align:center; color: var(--text-muted); padding: 2rem;">
+                                        Click "Run Batch Predictions" to populate</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -474,7 +665,8 @@
                 <!-- Bar Chart -->
                 <div class="card">
                     <div class="card-title">
-                        <div class="icon" style="background: rgba(251,191,36,0.15); color: var(--warning);">&#9608;</div>
+                        <div class="icon" style="background: rgba(251,191,36,0.15); color: var(--warning);">&#9608;
+                        </div>
                         Score Distribution
                     </div>
                     <div class="chart-container">
@@ -511,7 +703,7 @@
         // ============================
         // Configuration
         // ============================
-        const API_BASE = 'http://16.171.57.176:8000';
+        const API_BASE = 'http://51.21.149.34:8000';
         let predictionCount = 0;
         let totalPredictedScore = 0;
         let requestCount = 0;
@@ -875,4 +1067,5 @@
         }
     </script>
 </body>
+
 </html>

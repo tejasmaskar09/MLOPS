@@ -54,15 +54,13 @@ app = FastAPI(
     description="Predicts student final scores based on study hours, attendance, and previous score.",
     version="1.0.0",
 )
-
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # =====================================================================
 # Experiment 3: Logging Middleware — logs every request / response
